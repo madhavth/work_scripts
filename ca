@@ -1,0 +1,86 @@
+#!/bin/zsh
+
+set -e
+
+adb="$HOME/Android_Studio/sdk/platform-tools/adb"
+
+skip="0"
+
+default=$(current)
+
+prints() {
+    echo "$@" >&2
+}
+
+command() {
+    echo "$1 -------> $2" >&2
+}
+
+help() {
+    prints "usage: $0 [-s] [-h] -d DEVICE"
+    command "h" "help"
+    command "s" "skip copying current activity into system clipboard"
+    command "d" "Device to check for activity in"
+    command "l" "list all activities for current package"
+    exit 0
+}
+
+list=0
+
+while getopts "sd:hl" arg; do
+    case $arg in
+        l)
+            list=1
+            ;;
+        h)
+            help
+            ;;
+        s)
+         skip="1"
+         ;;
+     d)
+         default=$OPTARG
+         ;;
+        *)
+            echo "flag $arg invalid" >&2
+            exit 1
+            ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+current=$(adb -s $default shell 'dumpsys activity activities | grep ResumedActivity'| awk 'NR==1{print}' | awk '{print $3}' | awk -F '/' '{gsub(/\}/, "", $NF)}; {print $NF}')
+
+if [[ -z $current ]]; then
+    echo "emulator not running/found" <&1
+    exit 1
+fi
+
+if [[ $list == "1" ]]; then
+    prints "listing all activities for device $default"
+    declare -A list
+    package=$(cpkg $default)
+    res=$(adb -s $default shell dumpsys window windows | grep $package)
+    res=$(echo $res | perl -n -e 'm/'$package'\/([^}\s)]*)/ && print $1,"\n"' | uniq) 
+
+    listing=($(echo $res))
+
+    for i in ${listing[@]}; do
+        list["$i"]="$i"
+    done
+
+    for i in ${list[@]};do
+        echo "$i"
+    done
+
+    exit 0
+fi
+
+
+if [[ $skip == "0" ]]; then
+    echo "$current" | xargs | pbcopy
+    echo "copied current running activity : $current" >&2
+else
+    echo "$current"
+fi

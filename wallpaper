@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# Download random background / lockscreen wallpapers
+# For GNOME desktop. Tested on Ubuntu 18.04
+
+set -exo pipefail
+
+WALLPAPER_FOLDER="$HOME/Pictures/Wallpapers"
+mkdir -p "$WALLPAPER_FOLDER"
+
+# Change these to match your screen resolution
+WIDTH=1920
+HEIGHT=1080
+
+downloadRandomImage() {
+    # Download a random image for this resolution
+    categories="nature,landscape,street,calm"
+    FILENAME=$(cd "$WALLPAPER_FOLDER" && curl --output "$1.jpg" -L "https://picsum.photos/3024/1964")
+    # Return the path of the downloaded file    
+    echo "$WALLPAPER_FOLDER/$1.jpg"
+}
+
+DESKTOP_IMAGE=$(downloadRandomImage desktop_$(date +%s))
+#gsettings set org.gnome.desktop.background picture-uri-dark "file://$DESKTOP_IMAGE"
+#LOCKSCREEN_IMAGE=$(downloadRandomImage lock)
+#gsettings set org.gnome.desktop.screensaver picture-uri "file://$LOCKSCREEN_IMAGE"
+automator -i "$DESKTOP_IMAGE"  ~/Desktop/setDesktop.workflow
+
+
+osascript -e '''tell application "System Events" to set picture of (reference to current desktop) to "'${DESKTOP_IMAGE}'" '''

@@ -1,0 +1,54 @@
+#!/bin/zsh
+
+prints(){
+    echo "$@" >&2
+}
+
+command() {
+   prints "$1 ---> $2"
+}
+
+usage(){
+    prints "usage: $0"
+    command "h" "get help"
+    command "c" "change current device emulator"
+    exit 0
+}
+
+while getopts "hc:" arg; do
+    case $arg in
+        h)
+            usage
+            ;;
+        c)
+            change="$OPTARG"
+            ;;
+        *)
+            prints "unrecognized arg $arg ... exiting"
+            exit 1
+            ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+
+#### Script Begins
+
+if [[ ! -z $change ]]; then
+    echo "$change" > ~/.current
+fi
+
+if [[ ! -z $ANDROID_DEFAULT ]]; then
+    echo $ANDROID_DEFAULT
+    exit 0
+fi
+
+all_devices=($(adb devices | awk "NR!=1{print}" | awk -F' ' '{print $1}'))
+
+if [[ -z $all_devices ]]; then
+    prints "no device found..exiting"
+    exit 1
+fi
+
+echo "${all_devices[1]}"

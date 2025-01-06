@@ -1,0 +1,62 @@
+#!/bin/zsh
+
+set -e
+
+skip="0"
+
+default=$(current)
+
+prints() {
+    echo "$@" >&2
+}
+
+command() {
+    echo "$1 -------> $2" >&2
+}
+
+help() {
+    prints "usage: $0 [-s] [-h] -d DEVICE"
+    command "h" "help"
+    command "s" "skip copying current fragment into system clipboard"
+    command "d" "Device to check for fragment in"
+    exit 0
+}
+
+
+while getopts "sd:hl" arg; do
+    case $arg in
+        l)
+            list=1
+            ;;
+        h)
+            help
+            ;;
+        s)
+         skip="1"
+         ;;
+     d)
+         default=$OPTARG
+         ;;
+        *)
+            echo "flag $arg invalid" >&2
+            exit 1
+            ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+current=$(adb -s $default shell dumpsys activity $(ca -s) | perl -lane 'm/#0:\s*(.*)/ && print $1' | tail -n 1 | perl -lane 'm/([^\{]*)/ && print $1')
+
+if [[ -z $current ]]; then
+    echo "emulator not running/found" <&1
+    exit 1
+fi
+
+
+if [[ $skip == "0" ]]; then
+    echo "$current" | xargs | pbcopy
+    echo "copied current running fragment : $current" >&2
+else
+    echo "$current"
+fi
