@@ -1,0 +1,116 @@
+#!/bin/zsh
+
+set -e
+
+OTHER_ARGS=()
+ASSIGN=""
+this=`basename $0`
+TEST=""
+LIST_ARGS=($(echo $@))
+
+prints() {
+    echo "$@" >&2
+}
+
+command() {
+    prints "$1 ----> $2"
+}
+
+die() {
+    prints "$@"
+    exit 1
+}
+
+
+arg=""
+second_arg=""
+
+function cifa() {
+    if [[ -n $second_arg ]] && [[ $second_arg != "-"* ]]; then
+        echo $second_arg
+    else
+        prints "invalid flag argument for $arg"
+        exit 0
+    fi
+}
+
+function slist() {
+    LIST_ARGS=("${LIST_ARGS[@]:${1:-1}}")
+}
+
+usage() {
+    prints "usage: $this"
+    command "-h|--help" "get help"
+    command "-m|--module" "module to run sonar on"
+    command "-b|--base" "base branch to compare with" 
+    exit 0
+}
+
+## Init Args
+module_name=""
+pr_base="develop"
+pr_key=""
+
+while [[ -n $LIST_ARGS ]]; do
+arg=$LIST_ARGS[1]
+second_arg=$LIST_ARGS[2]
+
+    if [[ -z $1 ]]; then
+        break
+    fi
+
+    case $arg in
+        -h|--help)
+            usage
+            ;;
+          -k|--key)
+            pr_key=$(cifa)
+            slist
+            ;;
+          -b|--base)
+            pr_base=$(cifa)
+            slist
+            ;;
+          -m|--module)
+            module_name=$(cifa)
+            slist
+            ;;
+        -a=*|--assign=*)
+            ASSIGN="${arg#*=}"
+            ;;
+        *)
+            OTHER_ARGS+=("$arg")
+            ;;
+    esac
+
+    if [[ -n $arg ]]; then; slist; fi
+done
+
+set +e
+
+# Script Begins here
+if [[ -z $module_name ]]; then
+  prints "module name not provided. cant run. exiting"
+  exit 1
+fi
+
+if [[ ! -d "$module_name" ]]; then
+  prints "no such module found in current directory. not found - ${module_name} -- try again."
+  exit 1
+fi
+
+if [[ ! -f "gradlew" ]]; then 
+  prints "not a gradle project/ gradlew not found. exiting"
+  exit 1
+fi
+
+if [[ -z $pr_key ]]; then
+  prints "pr key not found, exiting"
+  exit 1
+fi
+
+./gradlew jacocoTestReport ":${module_name}:sonar" -Dsonar.verbose=true -Dsonar.login=${SONAR_TOKEN} -Dsonar.pullrequest.key=${pr_key}\
+  -Dsonar.pullrequest-base=${pr_base}\
+  -Dsonar.pullrequest.branch=$(git branch --show-current) -Dsonar.host.url="https://engineering.paypalcorp.com/sonarqube"\
+  -PtestCoverageEnabled -PenabledUnitTestCoverage -Dsonar.log.level=DEBUG
+
