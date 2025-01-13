@@ -46,7 +46,7 @@ done
 
 shift $((OPTIND-1))
 
-current=$(adb -s $default shell dumpsys activity $(ca -s) | perl -lane 'm/#0:\s*(.*)/ && print $1' | tail -n 1 | perl -lane 'm/([^\{]*)/ && print $1')
+current=$(adb -s $default shell dumpsys activity $(ca -s) | perl -lane 'm/#0:\s*(.*)/ && print $1' | tail -n 3 | perl -lane 'm/([^\{]*)/ && print $1')
 
 if [[ -z $current ]]; then
     echo "emulator not running/found" <&1
@@ -55,7 +55,7 @@ fi
 
 
 if [[ $skip == "0" ]]; then
-    echo "$current" | xargs | pbcopy
+    echo "$current" #| xargs | pbcopy
     echo "copied current running fragment : $current" >&2
 else
     echo "$current"
