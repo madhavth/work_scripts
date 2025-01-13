@@ -43,6 +43,7 @@ usage() {
     command "-h|--help" "get help"
     command "-m|--module" "module to run sonar on"
     command "-b|--base" "base branch to compare with" 
+    command "-k|--key" "pr key"
     exit 0
 }
 
