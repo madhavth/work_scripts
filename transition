@@ -1,0 +1,81 @@
+#!/bin/zsh
+
+set -e
+
+OTHER_ARGS=()
+ASSIGN=""
+this=`basename $0`
+TEST=""
+LIST_ARGS=($(echo $@))
+
+prints() {
+    echo "$@" >&2
+}
+
+command() {
+    prints "$1 ----> $2"
+}
+
+die() {
+    prints "$@"
+    exit 1
+}
+
+
+arg=""
+second_arg=""
+
+function cifa() {
+    if [[ -n $second_arg ]] && [[ $second_arg != "-"* ]]; then
+        echo $second_arg
+    else
+        prints "invalid flag argument for $arg"
+        exit 0
+    fi
+}
+
+function slist() {
+    LIST_ARGS=("${LIST_ARGS[@]:${1:-1}}")
+}
+
+usage() {
+    prints "usage: $this"
+    command "-h|--help" "get help"
+    exit 0
+}
+
+## Init Args
+
+while [[ -n $LIST_ARGS ]]; do
+arg=$LIST_ARGS[1]
+second_arg=$LIST_ARGS[2]
+
+    if [[ -z $1 ]]; then
+        break
+    fi
+
+    case $arg in
+        -h|--help)
+            usage
+            ;;
+        -a=*|--assign=*)
+            ASSIGN="${arg#*=}"
+            ;;
+        -t|--test)
+            TEST=$(cifa)
+            slist
+            ;;
+        *)
+            OTHER_ARGS+=("$arg")
+            ;;
+    esac
+
+    if [[ -n $arg ]]; then; slist; fi
+done
+
+set +e
+
+# Script Begins here
+adb -s $(current) shell settings put global window_animation_scale ${OTHER_ARGS}
+adb -s $(current) shell settings put global transition_animation_scale ${OTHER_ARGS}
+adb -s $(current) shell settings put global animator_duration_scale ${OTHER_ARGS}
